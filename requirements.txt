@@ -1,0 +1,50 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# VajraDrishti — Python dependencies
+# Pin minor versions so the environment is reproducible across machines.
+# Last updated: 2026-10
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── Core ML ───────────────────────────────────────────────────────────────────
+torch>=2.2.0,<2.4.0           # deep learning framework
+# torchvision is optional — install separately if you need it
+# torchvision>=0.17.0,<0.20.0
+numpy>=1.26.0,<2.0.0          # numerical arrays
+scipy>=1.12.0,<2.0.0          # signal processing helpers for synthetic generator
+
+# ── Data / IO ─────────────────────────────────────────────────────────────────
+xarray>=2024.1.0              # labelled N-D arrays, used for radar/NWP grids
+h5py>=3.10.0                  # read SEVIR HDF5 files
+netCDF4>=1.6.5                # optional ERA5 NetCDF support
+pandas>=2.2.0                 # tabular metadata, event splits
+
+# ── Baseline nowcasting ────────────────────────────────────────────────────────
+# pysteps requires -fopenmp which Apple clang does NOT support out of the box.
+# We implement our own scipy-based Lucas-Kanade advection in src/baselines/.
+# To install pysteps (optional, needs libomp from Homebrew), see:
+#   optional-requirements.txt
+pillow>=10.0.0                # image I/O (used in evaluate plots)
+
+# ── Geospatial ────────────────────────────────────────────────────────────────
+shapely>=2.0.0                # polygon operations for district joins
+pyproj>=3.6.0                 # coordinate reference system transforms
+
+# ── Backend API ───────────────────────────────────────────────────────────────
+fastapi>=0.111.0,<0.115.0     # async web framework
+uvicorn[standard]>=0.29.0     # ASGI server
+pydantic>=2.7.0,<3.0.0        # request/response validation
+python-multipart>=0.0.9       # form data (approve endpoint)
+
+# ── Alert XML ─────────────────────────────────────────────────────────────────
+lxml>=5.2.0                   # fast XML library for CAP 1.2 generation
+
+# ── Visualisation (server-side, used in evaluate.py plots) ────────────────────
+matplotlib>=3.8.0             # loss curves, skill score plots saved to docs/images/
+
+# ── Testing / Quality ─────────────────────────────────────────────────────────
+pytest>=8.0.0
+pytest-asyncio>=0.23.0        # async test support for FastAPI routes
+httpx>=0.27.0                 # test client for FastAPI
+ruff>=0.4.0                   # linter + formatter (replaces flake8/black/isort)
+
+# ── Config ────────────────────────────────────────────────────────────────────
+pyyaml>=6.0.1                 # load configs/config.yaml

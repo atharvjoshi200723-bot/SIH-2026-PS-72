@@ -1,0 +1,149 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# VajraDrishti — master configuration
+# All tuneable values live here. Source code reads this file via src/config.py.
+# Change values here; do not hard-code them in Python files.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── Project metadata ──────────────────────────────────────────────────────────
+project:
+  name: VajraDrishti
+  version: "0.1.0"
+  ps_id: PS26072          # Smart India Hackathon 2026 problem statement ID
+
+# ── Grid settings ─────────────────────────────────────────────────────────────
+grid:
+  # Spatial resolution in kilometres (design target, not validated).
+  resolution_km: 1
+  # Synthetic / SEVIR grid used for training (keep small for laptop CPU runs).
+  height: 128
+  width: 128
+
+# ── Temporal settings ─────────────────────────────────────────────────────────
+time:
+  step_minutes: 15          # one forecast step = 15 minutes
+  input_frames: 4           # number of past frames fed to the model (1 hour of history)
+  output_frames: 12         # frames predicted (12 × 15 min = 180 min = 3 hours)
+
+# ── Data paths (relative to repo root; overridden by env vars in production) ──
+paths:
+  data_root: data/
+  sevir_root: data/sevir/
+  synthetic_root: data/synthetic/
+  checkpoints: checkpoints/
+  results: results/
+  district_geojson: data/districts_sample.geojson
+
+# ── Synthetic data generator ──────────────────────────────────────────────────
+synthetic:
+  # How many storm "events" to generate.
+  num_events: 300
+  # Frames per event (input + output must fit inside this).
+  frames_per_event: 20
+  # Number of storm blobs per frame.
+  num_blobs_range: [1, 5]
+  # Blob radius range in grid cells.
+  blob_radius_range: [5, 30]
+  # Peak reflectivity value (dBZ-like scale, mapped to 0-1 later).
+  peak_value: 1.0
+  # Fraction of frames that have intense cells (for imbalance realism).
+  severe_fraction: 0.05
+  # Random seed for reproducibility.
+  seed: 42
+
+# ── SEVIR dataset ─────────────────────────────────────────────────────────────
+sevir:
+  # We only use a small subset of SEVIR events.
+  # Full dataset is ~1 TB; this subset is a few GB.
+  num_events: 200
+  # SEVIR channel to use as the proxy radar/reflectivity field.
+  channel: vil           # VIL = vertically integrated liquid, dBZ-like
+  # AWS S3 bucket (public, no credentials needed for anonymous download).
+  s3_bucket: s3://sevir/
+  # Local subset target size in frames — stops early if reached.
+  max_frames: 5000
+
+# ── Train / val / test split ──────────────────────────────────────────────────
+split:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+  # Split is done by event (not by frame) to avoid temporal leakage.
+
+# ── Model: 3D U-Net + ConvLSTM ────────────────────────────────────────────────
+model:
+  name: unet_convlstm
+  # Feature channels at each U-Net encoder level.
+  encoder_channels: [16, 32, 64]
+  # ConvLSTM hidden dimensions (one per encoder level used as skip).
+  convlstm_hidden: 64
+  # Kernel sizes.
+  kernel_size: 3
+  dropout: 0.1
+
+# ── Loss function ──────────────────────────────────────────────────────────────
+loss:
+  # Weighted MSE: cells above the severe_threshold get higher weight.
+  severe_threshold: 0.5      # normalised reflectivity threshold
+  severe_weight: 10.0        # weight multiplier for severe cells
+  # Focal loss parameters (used on the binary severe/not-severe head).
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  # Mix between MSE and focal loss.
+  mse_weight: 0.7
+  focal_weight: 0.3
+
+# ── Training ───────────────────────────────────────────────────────────────────
+training:
+  batch_size: 4
+  max_epochs: 30
+  learning_rate: 1.0e-3
+  weight_decay: 1.0e-4
+  # Gradient clipping to stabilise ConvLSTM training.
+  grad_clip: 1.0
+  # Save a checkpoint every N epochs.
+  checkpoint_every: 5
+  # Use GPU if available, else CPU.
+  device: auto
+
+# ── Evaluation ─────────────────────────────────────────────────────────────────
+evaluation:
+  # Reflectivity threshold (normalised) above which a cell is "stormy".
+  storm_threshold: 0.4
+  # Lead times (in minutes) at which skill scores are computed.
+  lead_times_min: [15, 30, 60, 90, 120, 180]
+
+# ── Fallback tiers ─────────────────────────────────────────────────────────────
+fallback:
+  # A source is considered "available" if its last update is within this many minutes.
+  radar_max_age_min: 30
+  satellite_max_age_min: 45
+  aws_max_age_min: 60
+  nwp_max_age_min: 120
+
+# ── Risk mapping (IMD colour scale) ───────────────────────────────────────────
+risk:
+  # Thresholds applied to peak predicted reflectivity (normalised 0–1).
+  green_max: 0.25
+  yellow_max: 0.50
+  orange_max: 0.75
+  # Above orange_max → Red
+  # These map to IMD warning colours. Thresholds are design choices, not
+  # officially validated against IMD's own thresholds.
+  colours:
+    Green:  "#2ecc71"
+    Yellow: "#f1c40f"
+    Orange: "#e67e22"
+    Red:    "#e74c3c"
+
+# ── API ────────────────────────────────────────────────────────────────────────
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: true
+  # SQLite database path (relative to repo root).
+  db_path: data/vajradrishti.db
+
+# ── Dashboard ──────────────────────────────────────────────────────────────────
+web:
+  port: 3000
+  api_base_url: "http://localhost:8000"

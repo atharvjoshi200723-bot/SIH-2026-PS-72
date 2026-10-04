@@ -1,0 +1,22 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# VajraDrishti — Optional requirements
+#
+# These packages have C-extension build requirements that may need extra steps
+# on macOS. Install after `make setup` if you want the full pysteps backend.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── pysteps (optional — needs libomp on macOS) ────────────────────────────────
+# macOS Apple clang does not ship with OpenMP support.
+# Install libomp first, then install pysteps with the correct compiler flags:
+#
+#   brew install libomp
+#   CC=clang \
+#   CFLAGS="-I$(brew --prefix libomp)/include -Xpreprocessor -fopenmp" \
+#   LDFLAGS="-L$(brew --prefix libomp)/lib -lomp" \
+#   pip install pysteps>=1.8.0
+#
+# Without libomp, our own scipy-based optical-flow advection is used instead
+# (src/baselines/advection.py). It produces equivalent results for a prototype.
+
+# ── torchvision (optional — large download) ───────────────────────────────────
+# torchvision>=0.17.0,<0.20.0
